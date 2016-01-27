@@ -59,11 +59,23 @@ Example use:
     val, ok := h.LookupStringKey("My number")
     h.DeleteStringKey("My number")
 
-Note that this library is only a starting point of source code, and not intended to be used without customization. Users of the HashTable will have to customize it by changing the definitions of Key_t and Val_t to suite their needs. I'm experimenting next with storing objects in Capnproto serialized format, but this branch (branch capnp) isn't quite ready for use.
+Note that this library is only a starting point of source code, and not intended to be used without customization. Users of the HashTable will have to customize it by changing the definitions of Key_t and Val_t to suite their needs.
+
+On Save(), serialization of the HashTable itself is done using msgpack to write bytes to the first page (4k bytes) of the memory mapped file. This uses github.com/tinylib/msgp which is a blazing fast msgpack serialization library. It is fast because it avoids reflection and pre-computes the serializations (using go generate based inspection of your go source). If you need to serialize your values into the Val_t, I would suggest evaluating the msgp for serialization and deserialization. The author, Philip Hofer, has done a terrific job and put alot of effort into tuning it for performance. If you are still pressed for speed, consider also ommitting the field labels using the '//msgp:tuple MyValueType' annotation. As Mr. Hofer says, "For smaller objects, tuple encoding can yield serious performance improvements." [https://github.com/tinylib/msgp/wiki/Preprocessor-Directives].
 
 Related ideas:
 
 https://gist.github.com/mish15/9822474 (using CGO)
+
+CGO note: the cgo-malloc branch of this github repo has an implementation that uses CGO to
+call the malloc/calloc/free functions in the C stdlib. Using CGO
+gives up the save-to-disk instantly feature and creates a portability issue where
+you have linked against a specific version of the C stdlib. However if you
+are making/destroying alot of tables, the CGO apporach may be faster. This
+is because calling malloc and free in the standard C library are much faster than
+making repeated system calls to mmap().
+
+more related ideas:
 
 https://groups.google.com/forum/#!topic/golang-nuts/kCQP6S6ZGh0
 
